@@ -6,26 +6,33 @@ struct PlayersView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                sortModeHeader
-                    .background(Color(.systemBackground))
+            // List with beautiful, spacious player rows
+            List {
+                // Sort mode header - now inside List so it scrolls
+                Section {
+                    VStack(spacing: 12) {
+                        HStack(spacing: 12) {
+                            ForEach(PlayersViewModel.SortMode.allCases) { mode in
+                                sortModeButton(for: mode)
+                            }
+                        }
 
-                // Last refresh indicator
-                if let lastRefresh = vm.lastRefreshDate {
-                    HStack {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(.caption2)
-                        Text("Updated \(formatRelativeTime(lastRefresh))")
-                            .font(.caption2)
+                        // Last refresh indicator
+                        if let lastRefresh = vm.lastRefreshDate {
+                            HStack {
+                                Image(systemName: "clock.arrow.circlepath")
+                                    .font(.caption2)
+                                Text("Updated \(formatRelativeTime(lastRefresh))")
+                                    .font(.caption2)
+                            }
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                        }
                     }
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 4)
-                    .background(Color(.systemGroupedBackground))
+                    .padding(.vertical, 8)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                    .listRowBackground(Color.clear)
                 }
-
-                // List with beautiful, spacious player rows
-                List {
                     // Show favorites first (if any and not filtered)
                     if !vm.favoritePlayers.isEmpty && !vm.filters.showFavoritesOnly && vm.filters.groupBy == .none {
                         Section {
@@ -85,13 +92,12 @@ struct PlayersView: View {
                             }
                         }
                     }
-                }
-                .listStyle(.plain)
-                .refreshable {
-                    await vm.refresh()
-                }
-                .searchable(text: $vm.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search players")
             }
+            .listStyle(.plain)
+            .refreshable {
+                await vm.refresh()
+            }
+            .searchable(text: $vm.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search players")
             .navigationTitle("Players")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -113,20 +119,7 @@ struct PlayersView: View {
         }
     }
 
-    // MARK: - Sort Mode Header
-
-    private var sortModeHeader: some View {
-        VStack(spacing: 16) {
-            // Sort Mode Selection - Large, clear, obvious
-            HStack(spacing: 12) {
-                ForEach(PlayersViewModel.SortMode.allCases) { mode in
-                    sortModeButton(for: mode)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top, 8)
-        }
-    }
+    // MARK: - Sort Mode Button
 
     private func sortModeButton(for mode: PlayersViewModel.SortMode) -> some View {
         Button {

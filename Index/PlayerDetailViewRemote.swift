@@ -291,11 +291,20 @@ struct PlayerDetailViewRemote: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: .month, count: rangeMode == .recent ? 3 : 12)) { value in
-                        AxisGridLine()
-                        AxisValueLabel(format: .dateTime.month(.abbreviated).year(.twoDigits))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                    AxisMarks(values: .stride(by: .month, count: rangeMode == .recent ? 6 : 24)) { value in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(.secondary.opacity(0.3))
+                        AxisValueLabel {
+                            if let date = value.as(Date.self) {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text(date, format: .dateTime.month(.narrow))
+                                        .font(.system(size: 9, weight: .semibold))
+                                    Text(date, format: .dateTime.year(.twoDigits))
+                                        .font(.system(size: 8))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
                     }
                 }
                 .chartYScale(domain: .automatic(includesZero: false, reversed: true))
@@ -345,26 +354,33 @@ struct PlayerDetailViewRemote: View {
     }
 
     private func roundRow(_ r: Round) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(r.tournament).font(.subheadline.weight(.semibold))
-                Text("\(r.course) • R\(r.roundNumber)")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("\(r.score)")
-                    .font(.title3.weight(.bold))
-                    .monospacedDigit()
-                if let diff = r.differential {
-                    Text(formatDifferential(diff))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
+        NavigationLink {
+            RoundDetailView(round: r, playerName: player.name)
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(r.tournament).font(.subheadline.weight(.semibold))
+                    Text("\(r.course) • R\(r.roundNumber)")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(r.score)")
+                        .font(.title3.weight(.bold))
+                        .monospacedDigit()
+                    if let diff = r.differential {
+                        Text(formatDifferential(diff))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                }
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
+            .padding(.vertical, 6)
         }
-        .padding(.vertical, 6)
     }
 
     private func formatIndex(_ v: Double) -> String {
