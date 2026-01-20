@@ -395,8 +395,9 @@ struct PlayerDetailViewRemote: View {
     }
 
     private func formatDifferential(_ v: Double) -> String {
+        // USGA format: show sign for positive, absolute value for negative (lower is better)
         let s = String(format: "%.1f", abs(v))
-        return v > 0 ? "+\(s)" : v < 0 ? s : "0.0"  // No minus sign for negative diffs
+        return v > 0 ? "+\(s)" : v < 0 ? s : "0.0"
     }
 
     private func formatChartIndex(_ index: Double) -> String {
@@ -502,8 +503,9 @@ private struct RoundRowDetail: View {
     }
 
     private func formatDiff(_ v: Double) -> String {
+        // USGA format: +5.0 (bad), 2.0 (good), lower is better
         let s = String(format: "%.1f", abs(v))
-        return v > 0 ? "+\(s)" : v < 0 ? s : "0.0"  // No minus sign for negative diffs
+        return v > 0 ? "+\(s)" : v < 0 ? s : "0.0"
     }
     
     private func dateString(_ date: Date) -> String {

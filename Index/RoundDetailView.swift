@@ -268,11 +268,12 @@ struct RoundDetailView: View {
     }
 
     private func formatDifferential(_ diff: Double) -> String {
+        // USGA format: +5.0 (bad), 2.0 (good), lower is better
         let formatted = String(format: "%.1f", abs(diff))
         if diff > 0 {
             return "+\(formatted)"
         } else if diff < 0 {
-            return formatted  // No minus sign for negative diffs
+            return formatted  // No sign for negative (good performance)
         }
         return "0.0"
     }
