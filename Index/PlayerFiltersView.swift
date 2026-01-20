@@ -12,7 +12,6 @@ struct PlayerFilters: Equatable {
         case all = "All"
         case activeLastYear = "Active Last Year"
         case activeLast2Years = "Active Last 2 Years"
-        case retired = "Retired Only"
 
         var id: String { rawValue }
     }

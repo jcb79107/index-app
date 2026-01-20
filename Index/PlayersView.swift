@@ -57,8 +57,13 @@ struct PlayersView: View {
                         }
                     }
 
-                    // Grouped or flat list
-                    if vm.filters.groupBy == .none {
+                    // Empty state or grouped/flat list
+                    if vm.filtered.isEmpty {
+                        Section {
+                            emptyStateView
+                        }
+                        .listRowBackground(Color.clear)
+                    } else if vm.filters.groupBy == .none {
                         // Show non-favorites (or all if showing favorites only)
                         let playersToShow = vm.filters.showFavoritesOnly ? vm.favoritePlayers : vm.nonFavoritePlayers
 
@@ -240,6 +245,54 @@ struct PlayersView: View {
                 }
             }
             .padding(.vertical, 12)
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyStateView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "person.3.fill")
+                .font(.system(size: 60))
+                .foregroundStyle(.secondary.opacity(0.5))
+
+            Text("No Players Found")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(.primary)
+
+            Text(emptyStateMessage)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+
+            if hasActiveFilters {
+                Button {
+                    // Reset filters
+                    vm.filters = PlayerFilters()
+                } label: {
+                    Text("Clear Filters")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Color.accentColor)
+                        .clipShape(Capsule())
+                }
+                .padding(.top, 8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
+
+    private var emptyStateMessage: String {
+        if !vm.query.isEmpty {
+            return "No players match '\(vm.query)'"
+        } else if hasActiveFilters {
+            return "Try adjusting your filters to see more players"
+        } else {
+            return "No players available"
         }
     }
 

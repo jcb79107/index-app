@@ -34,16 +34,12 @@ struct RemotePlayer: Codable, Identifiable, Hashable {
         case pga = "PGA"
         case dpWorld = "DP World"
         case liv = "LIV"
-        case amateur = "Amateur"
-        case retired = "Retired"
 
         var displayName: String {
             switch self {
             case .pga: return "PGA Tour"
             case .dpWorld: return "DP World Tour"
             case .liv: return "LIV Golf"
-            case .amateur: return "Amateur"
-            case .retired: return "Retired"
             }
         }
     }

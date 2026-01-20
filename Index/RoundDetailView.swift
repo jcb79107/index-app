@@ -61,7 +61,8 @@ struct RoundDetailView: View {
 
                 VStack(alignment: .trailing, spacing: 8) {
                     // To Par
-                    if let toPar = round.score - round.par, toPar != 0 {
+                    let toPar = round.score - round.par
+                    if toPar != 0 {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text("TO PAR")
                                 .font(.caption2.weight(.semibold))
@@ -106,32 +107,13 @@ struct RoundDetailView: View {
                 .font(.headline)
                 .foregroundStyle(.primary)
 
-            // Front 9 / Back 9 if available
-            if let front9 = round.front9, let back9 = round.back9 {
-                HStack(spacing: 16) {
-                    nineBox(label: "FRONT 9", score: front9, par: 36)
-                    nineBox(label: "BACK 9", score: back9, par: 36)
-                }
-            } else {
-                Text("9-hole breakdown not available")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
             // Round Number Badge
             HStack {
                 Image(systemName: "flag.circle.fill")
-                    .foregroundStyle(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                 Text("Round \(round.roundNumber)")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                Text(round.scoreType.capitalized)
-                    .font(.caption.weight(.medium))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.accentColor.opacity(0.15))
-                    .foregroundStyle(.accentColor)
-                    .clipShape(Capsule())
             }
         }
         .padding(20)
@@ -148,7 +130,7 @@ struct RoundDetailView: View {
             HStack {
                 Image(systemName: "building.2.crop.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                 Text("Course Information")
                     .font(.headline)
             }
@@ -156,16 +138,12 @@ struct RoundDetailView: View {
             VStack(spacing: 12) {
                 courseInfoRow(icon: "flag.fill", label: "Course", value: round.course)
 
-                if round.yardage > 0 {
-                    courseInfoRow(icon: "ruler.fill", label: "Yardage", value: "\(round.yardage) yards")
+                if let courseRating = round.courseRating, courseRating > 0 {
+                    courseInfoRow(icon: "star.fill", label: "Rating", value: String(format: "%.1f", courseRating))
                 }
 
-                if round.courseRating > 0 {
-                    courseInfoRow(icon: "star.fill", label: "Rating", value: String(format: "%.1f", round.courseRating))
-                }
-
-                if round.slope > 0 {
-                    courseInfoRow(icon: "chart.line.uptrend.xyaxis", label: "Slope", value: "\(round.slope)")
+                if let slope = round.slope, slope > 0 {
+                    courseInfoRow(icon: "chart.line.uptrend.xyaxis", label: "Slope", value: "\(slope)")
                 }
 
                 courseInfoRow(icon: "circle.hexagongrid.fill", label: "Par", value: "\(round.par)")
@@ -189,22 +167,12 @@ struct RoundDetailView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 12) {
-                statCard(title: "Eagles", value: round.eagles > 0 ? "\(round.eagles)" : "-")
-                statCard(title: "Birdies", value: round.birdies > 0 ? "\(round.birdies)" : "-")
-                statCard(title: "Pars", value: round.pars > 0 ? "\(round.pars)" : "-")
-                statCard(title: "Bogeys", value: round.bogeys > 0 ? "\(round.bogeys)" : "-")
-                statCard(title: "Doubles+", value: round.doublePlus > 0 ? "\(round.doublePlus)" : "-")
-
-                if round.fairwaysHit > 0 {
-                    statCard(title: "Fairways", value: "\(round.fairwaysHit)/14")
+                if let fieldAverage = round.fieldAverage {
+                    statCard(title: "Field Avg", value: String(format: "%.1f", fieldAverage))
                 }
-
-                if round.greensInRegulation > 0 {
-                    statCard(title: "GIR", value: "\(round.greensInRegulation)/18")
-                }
-
-                if round.putts > 0 {
-                    statCard(title: "Putts", value: "\(round.putts)")
+                
+                if let fieldSize = round.fieldSize {
+                    statCard(title: "Field Size", value: "\(fieldSize)")
                 }
             }
         }
@@ -304,9 +272,9 @@ struct RoundDetailView: View {
         if diff > 0 {
             return "+\(formatted)"
         } else if diff < 0 {
-            return "-\(formatted)"
+            return formatted  // No minus sign for negative diffs
         }
-        return formatted
+        return "0.0"
     }
 
     private func scoreColor(_ score: Int, par: Int) -> Color {
@@ -336,30 +304,19 @@ struct RoundDetailView: View {
     NavigationStack {
         RoundDetailView(
             round: Round(
-                id: "1",
+                id: UUID(),
                 date: Date(),
                 tournament: "Masters Tournament",
                 course: "Augusta National Golf Club",
                 roundNumber: 1,
                 score: 71,
                 par: 72,
+                differential: -2.1,
                 courseRating: 76.2,
                 slope: 137,
-                yardage: 7545,
-                scoreType: "competition",
-                differential: -2.1,
-                front9: 35,
-                back9: 36,
-                eagles: 1,
-                birdies: 4,
-                pars: 10,
-                bogeys: 3,
-                doublePlus: 0,
-                fairwaysHit: 10,
-                greensInRegulation: 13,
-                putts: 28,
-                notes: nil,
-                source: "USGA"
+                fieldAverage: 73.5,
+                fieldSize: 156,
+                notes: nil
             ),
             playerName: "Tiger Woods"
         )

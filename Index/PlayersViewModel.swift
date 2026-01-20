@@ -132,8 +132,6 @@ final class PlayersViewModel: ObservableObject {
                 guard let lastRound = player.lastRoundDate else { return false }
                 return lastRound >= twoYearsAgo
             }
-        case .retired:
-            result = result.filter { $0.tour == .retired }
         }
 
         // Favorites filter

@@ -359,14 +359,18 @@ struct PlayerDetailViewRemote: View {
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(r.tournament).font(.subheadline.weight(.semibold))
+                    Text(r.tournament)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
                     Text("\(r.course) • R\(r.roundNumber)")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(r.score)")
                         .font(.title3.weight(.bold))
+                        .foregroundStyle(.primary)
                         .monospacedDigit()
                     if let diff = r.differential {
                         Text(formatDifferential(diff))
@@ -392,7 +396,7 @@ struct PlayerDetailViewRemote: View {
 
     private func formatDifferential(_ v: Double) -> String {
         let s = String(format: "%.1f", abs(v))
-        return v > 0 ? "+\(s)" : v < 0 ? "-\(s)" : "0.0"
+        return v > 0 ? "+\(s)" : v < 0 ? s : "0.0"  // No minus sign for negative diffs
     }
 
     private func formatChartIndex(_ index: Double) -> String {
@@ -406,8 +410,6 @@ struct PlayerDetailViewRemote: View {
         case .pga: return .blue
         case .dpWorld: return .orange
         case .liv: return .green
-        case .amateur: return .purple
-        case .retired: return .gray
         }
     }
 
@@ -501,7 +503,7 @@ private struct RoundRowDetail: View {
 
     private func formatDiff(_ v: Double) -> String {
         let s = String(format: "%.1f", abs(v))
-        return v > 0 ? "+\(s)" : v < 0 ? "-\(s)" : "0.0"
+        return v > 0 ? "+\(s)" : v < 0 ? s : "0.0"  // No minus sign for negative diffs
     }
     
     private func dateString(_ date: Date) -> String {

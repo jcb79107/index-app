@@ -430,7 +430,7 @@ struct TournamentPlayerRoundsView: View {
     private func formatDifferential(_ value: Double) -> String {
         let formatted = String(format: "%.1f", abs(value))
         if value > 0 { return "+\(formatted)" }
-        if value < 0 { return "-\(formatted)" }
+        if value < 0 { return formatted }  // No minus sign for negative diffs
         return "0.0"
     }
 
