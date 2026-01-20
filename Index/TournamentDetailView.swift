@@ -428,10 +428,10 @@ struct TournamentPlayerRoundsView: View {
     }
 
     private func formatDifferential(_ value: Double) -> String {
-        // USGA format: +5.0 (bad), 2.0 (good), lower is better
+        // USGA format: -3.5 (good, better than CR), +5.0 (bad, worse than CR)
         let formatted = String(format: "%.1f", abs(value))
         if value > 0 { return "+\(formatted)" }
-        if value < 0 { return formatted }  // No sign for negative (good performance)
+        if value < 0 { return "-\(formatted)" }
         return "0.0"
     }
 
