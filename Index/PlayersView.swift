@@ -10,17 +10,59 @@ struct PlayersView: View {
                 sortModeHeader
                     .background(Color(.systemBackground))
 
+                // Last refresh indicator
+                if let lastRefresh = vm.lastRefreshDate {
+                    HStack {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.caption2)
+                        Text("Updated \(formatRelativeTime(lastRefresh))")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 4)
+                    .background(Color(.systemGroupedBackground))
+                }
+
                 // List with beautiful, spacious player rows
                 List {
+                    // Show favorites first (if any and not filtered)
+                    if !vm.favoritePlayers.isEmpty && !vm.filters.showFavoritesOnly && vm.filters.groupBy == .none {
+                        Section {
+                            ForEach(vm.favoritePlayers) { player in
+                                playerRow(player, showFavoriteStar: false)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button {
+                                            vm.toggleFavorite(player)
+                                        } label: {
+                                            Label("Unfavorite", systemImage: "star.slash")
+                                        }
+                                        .tint(.orange)
+                                    }
+                            }
+                        } header: {
+                            HStack {
+                                Image(systemName: "star.fill")
+                                Text("Favorites")
+                            }
+                            .foregroundStyle(.yellow)
+                            .font(.headline)
+                        }
+                    }
+
                     // Grouped or flat list
                     if vm.filters.groupBy == .none {
-                        ForEach(vm.filtered) { player in
+                        // Show non-favorites (or all if showing favorites only)
+                        let playersToShow = vm.filters.showFavoritesOnly ? vm.favoritePlayers : vm.nonFavoritePlayers
+
+                        ForEach(playersToShow) { player in
                             playerRow(player)
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                     Button {
                                         vm.toggleFavorite(player)
                                     } label: {
-                                        Label("Favorite", systemImage: vm.isFavorite(player) ? "star.slash" : "star.fill")
+                                        Label(vm.isFavorite(player) ? "Unfavorite" : "Favorite",
+                                              systemImage: vm.isFavorite(player) ? "star.slash" : "star.fill")
                                     }
                                     .tint(.yellow)
                                 }
@@ -34,7 +76,8 @@ struct PlayersView: View {
                                             Button {
                                                 vm.toggleFavorite(player)
                                             } label: {
-                                                Label("Favorite", systemImage: vm.isFavorite(player) ? "star.slash" : "star.fill")
+                                                Label(vm.isFavorite(player) ? "Unfavorite" : "Favorite",
+                                                      systemImage: vm.isFavorite(player) ? "star.slash" : "star.fill")
                                             }
                                             .tint(.yellow)
                                         }
@@ -116,27 +159,57 @@ struct PlayersView: View {
 
     // MARK: - Player Row - Redesigned for beauty and clarity
 
-    private func playerRow(_ player: RemotePlayer) -> some View {
+    private func playerRow(_ player: RemotePlayer, showFavoriteStar: Bool = true) -> some View {
         NavigationLink {
             PlayerDetailViewRemote(player: player)
         } label: {
             HStack(spacing: 16) {
-                // Avatar - Larger, more prominent
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.accentColor.opacity(0.2), Color.accentColor.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                // Avatar - Now with actual photo!
+                if let photoURL = player.photoURL, let url = URL(string: photoURL) {
+                    AsyncImage(url: url) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 52, height: 52)
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(Color.accentColor.opacity(0.2), lineWidth: 2)
                             )
-                        )
+                    } placeholder: {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.accentColor.opacity(0.2), Color.accentColor.opacity(0.1)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 52, height: 52)
+                            .overlay {
+                                Text(initials(from: player.name))
+                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.primary.opacity(0.7))
+                            }
+                    }
+                } else {
+                    // Fallback avatar
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.accentColor.opacity(0.2), Color.accentColor.opacity(0.1)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
 
-                    Text(initials(from: player.name))
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary.opacity(0.7))
+                        Text(initials(from: player.name))
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primary.opacity(0.7))
+                    }
+                    .frame(width: 52, height: 52)
                 }
-                .frame(width: 48, height: 48)
 
                 // Player info
                 VStack(alignment: .leading, spacing: 4) {
@@ -146,7 +219,7 @@ struct PlayersView: View {
                             .foregroundStyle(.primary)
 
                         // Favorite indicator - subtle but visible
-                        if vm.isFavorite(player) {
+                        if showFavoriteStar && vm.isFavorite(player) {
                             Image(systemName: "star.fill")
                                 .font(.system(size: 10))
                                 .foregroundStyle(.yellow)
@@ -222,6 +295,30 @@ struct PlayersView: View {
             .compactMap { $0 }
             .map(String.init)
             .joined()
+    }
+
+    private func formatRelativeTime(_ date: Date) -> String {
+        let now = Date()
+        let components = Calendar.current.dateComponents([.minute, .hour, .day], from: date, to: now)
+
+        if let days = components.day, days > 0 {
+            if days == 1 {
+                return "1 day ago"
+            } else if days < 7 {
+                return "\(days) days ago"
+            } else {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .medium
+                formatter.timeStyle = .none
+                return "on \(formatter.string(from: date))"
+            }
+        } else if let hours = components.hour, hours > 0 {
+            return hours == 1 ? "1 hour ago" : "\(hours) hours ago"
+        } else if let minutes = components.minute, minutes > 0 {
+            return minutes == 1 ? "1 min ago" : "\(minutes) mins ago"
+        } else {
+            return "just now"
+        }
     }
 }
 

@@ -1,24 +1,33 @@
-//
-//  ContentView.swift
-//  Index
-//
-//  Created by Jason Baer on 1/2/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+
+            PlayersView()
+                .tabItem {
+                    Label("Players", systemImage: "person.3.fill")
+                }
+
+            CoursesView()
+                .tabItem {
+                    Label("Courses", systemImage: "flag.fill")
+                }
+
+            TrendsView()
+                .tabItem {
+                    Label("Trends", systemImage: "chart.xyaxis.line")
+                }
+
+            SettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape")
+                }
         }
-        .padding()
     }
 }
 
 #Preview {
     ContentView()
 }
+

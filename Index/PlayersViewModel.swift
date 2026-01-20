@@ -21,10 +21,12 @@ final class PlayersViewModel: ObservableObject {
     @Published var sortMode: SortMode = .bestIndex
     @Published var filters: PlayerFilters = PlayerFilters()
     @Published var debouncedQuery: String = ""
+    @Published var lastRefreshDate: Date? = nil
 
     @Published private(set) var allPlayers: [RemotePlayer] = []
 
     @AppStorage("favoritePlayerSlugs") private var favoritesData: Data = Data()
+    @AppStorage("lastPlayersRefresh") private var lastRefreshTimestamp: Double = 0
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -62,12 +64,19 @@ final class PlayersViewModel: ObservableObject {
 
     func load() async {
         allPlayers = RemotePlayersStore.shared.players()
+        if lastRefreshTimestamp > 0 {
+            lastRefreshDate = Date(timeIntervalSince1970: lastRefreshTimestamp)
+        }
     }
 
     func refresh() async {
         let playersURL = URL(string: "https://jcb79107.github.io/index-data/players.json")!
         await RemotePlayersStore.shared.fetchAndCache(from: playersURL)
         allPlayers = RemotePlayersStore.shared.players()
+
+        let now = Date()
+        lastRefreshTimestamp = now.timeIntervalSince1970
+        lastRefreshDate = now
     }
 
     private func setupDebouncing() {
@@ -171,6 +180,18 @@ final class PlayersViewModel: ObservableObject {
         }
 
         return result
+    }
+
+    // MARK: - Favorites Filtering
+
+    var favoritePlayers: [RemotePlayer] {
+        let favs = favorites
+        return filtered.filter { favs.contains($0.slug) }
+    }
+
+    var nonFavoritePlayers: [RemotePlayer] {
+        let favs = favorites
+        return filtered.filter { !favs.contains($0.slug) }
     }
 
     // MARK: - Grouping
