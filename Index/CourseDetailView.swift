@@ -3,6 +3,25 @@ import SwiftUI
 struct CourseDetailView: View {
     let course: Course
     @State private var showingSimulation = false
+    @State private var selectedYear: Int?
+
+    private var yearsAvailable: [Int] {
+        guard let history = course.versionHistory else { return [] }
+        var years: [Int] = []
+        for version in history {
+            for year in version.startYear...version.endYear {
+                years.append(year)
+            }
+        }
+        return years.sorted()
+    }
+
+    private var selectedVersion: CourseVersion? {
+        guard let year = selectedYear else {
+            return course.currentVersion
+        }
+        return course.version(for: year)
+    }
 
     var body: some View {
         ScrollView {
@@ -96,6 +115,11 @@ struct CourseDetailView: View {
                 .padding(20)
                 .background(Color(.systemGray6))
                 .cornerRadius(16)
+
+                // Version History Timeline - THE COOL UX FEATURE!
+                if course.hasVersionHistory {
+                    versionHistorySection
+                }
 
                 // Simulate button - Eye-catching and prominent
                 if course.hasUSGARating {
@@ -224,6 +248,168 @@ struct CourseDetailView: View {
         }
     }
 
+    // MARK: - Version History Section
+
+    private var versionHistorySection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Course History")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(.primary)
+
+            // Year Timeline Selector
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(yearsAvailable, id: \.self) { year in
+                        YearButton(
+                            year: year,
+                            isSelected: selectedYear == year || (selectedYear == nil && year == yearsAvailable.last),
+                            action: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    selectedYear = year
+                                }
+                            }
+                        )
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+            .padding(.horizontal, -20)
+
+            // Stats Card for Selected Year
+            if let version = selectedVersion {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Yardage with comparison
+                    HStack(alignment: .top, spacing: 20) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("YARDAGE")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.secondary)
+                                .tracking(0.5)
+
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Text("\(version.yardage)")
+                                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.primary)
+
+                                Text("yards")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            // Show delta if not the earliest version
+                            if let increase = yardageChange(for: version) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: increase > 0 ? "arrow.up.forward" : "arrow.down.forward")
+                                        .font(.system(size: 11, weight: .bold))
+                                    Text("\(increase > 0 ? "+" : "")\(increase) yards since \(course.earliestVersion?.startYear ?? 2001)")
+                                        .font(.caption.weight(.medium))
+                                }
+                                .foregroundStyle(increase > 0 ? .orange : .green)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background((increase > 0 ? Color.orange : Color.green).opacity(0.15))
+                                .cornerRadius(8)
+                            }
+                        }
+
+                        Spacer()
+
+                        // Year period
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(version.yearRange)
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.accentColor)
+
+                            Text("PERIOD")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.secondary)
+                                .tracking(0.5)
+                        }
+                    }
+
+                    // Notes/Description
+                    HStack(spacing: 10) {
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.accentColor)
+
+                        Text(version.notes)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.accentColor.opacity(0.08))
+                    .cornerRadius(10)
+                }
+                .padding(20)
+                .background(Color(.systemGray6))
+                .cornerRadius(16)
+            }
+
+            // Version History Chart (if multiple versions)
+            if let history = course.versionHistory, history.count > 1 {
+                versionHistoryChart(history: history)
+            }
+        }
+    }
+
+    private func yardageChange(for version: CourseVersion) -> Int? {
+        guard let earliest = course.earliestVersion?.yardage else { return nil }
+        let current = version.yardage
+        let change = current - earliest
+        return change != 0 ? change : nil
+    }
+
+    private func versionHistoryChart(history: [CourseVersion]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Yardage Evolution")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            // Simple bar chart representation
+            VStack(spacing: 8) {
+                ForEach(history) { version in
+                    let maxYardage = history.map(\.yardage).max() ?? 7500
+                    let minYardage = history.map(\.yardage).min() ?? 6500
+                    let range = maxYardage - minYardage
+                    let normalizedWidth = range > 0 ? CGFloat(version.yardage - minYardage) / CGFloat(range) : 1.0
+                    let width = 0.5 + (normalizedWidth * 0.5) // Scale between 0.5 and 1.0
+
+                    HStack(spacing: 12) {
+                        Text(version.yearRange)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 60, alignment: .leading)
+
+                        GeometryReader { geo in
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.accentColor, Color.accentColor.opacity(0.6)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: geo.size.width * width)
+                        }
+                        .frame(height: 24)
+
+                        Text("\(version.yardage)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .monospacedDigit()
+                            .frame(width: 50, alignment: .trailing)
+                    }
+                }
+            }
+            .padding(16)
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+        }
+    }
+
     // Color coding for slope difficulty
     private func slopeColor(for slope: Int) -> Color {
         switch slope {
@@ -263,6 +449,34 @@ struct CourseStatBox: View {
         .padding(.vertical, 14)
         .background(Color(.systemGray6))
         .cornerRadius(12)
+    }
+}
+
+// MARK: - Year Button - For timeline selector
+
+struct YearButton: View {
+    let year: Int
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text("\(year)")
+                .font(.system(size: 15, weight: isSelected ? .bold : .medium, design: .rounded))
+                .foregroundStyle(isSelected ? .white : .primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(isSelected ? Color.accentColor : Color(.systemGray5))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+                )
+                .shadow(color: isSelected ? Color.accentColor.opacity(0.3) : Color.clear, radius: 6, x: 0, y: 3)
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -365,10 +579,11 @@ struct TournamentCard: View {
             courseRating: 78.1,
             slope: 137,
             par: 72,
+            yardage: 7545,
             tournamentCount: 85,
             roundCount: 7241,
-            firstPlayed: Date(),
-            lastPlayed: Date(),
+            firstPlayed: "2001-04-05T00:00:00Z",
+            lastPlayed: "2024-04-14T00:00:00Z",
             recentTournaments: [
                 RecentTournament(
                     name: "Masters Tournament",
@@ -380,6 +595,12 @@ struct TournamentCard: View {
                     fieldAverage: 74.2,
                     leaderboard: nil
                 )
+            ],
+            versionHistory: [
+                CourseVersion(startYear: 2001, endYear: 2001, yardage: 6985, notes: "Pre-Tiger proofing"),
+                CourseVersion(startYear: 2002, endYear: 2005, yardage: 7270, notes: "First major lengthening"),
+                CourseVersion(startYear: 2006, endYear: 2018, yardage: 7435, notes: "Further expansions"),
+                CourseVersion(startYear: 2019, endYear: 2024, yardage: 7545, notes: "Current championship setup")
             ]
         ))
     }

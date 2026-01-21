@@ -1,25 +1,12 @@
 import Foundation
 
-// MARK: - Payload
-
-struct RemoteCoursesPayload: Codable {
-    let version: Int
-    let updatedAt: Date
-    let count: Int
-    let courses: [Course]
-}
-
 // MARK: - Store
 
 final class RemoteCoursesStore {
     static let shared = RemoteCoursesStore()
     private init() {}
 
-    private let decoder: JSONDecoder = {
-        let d = JSONDecoder()
-        d.dateDecodingStrategy = .iso8601
-        return d
-    }()
+    private let decoder = JSONDecoder()
 
     private let fileName = "remote_courses_cache.json"
 
@@ -28,11 +15,12 @@ final class RemoteCoursesStore {
         return dir.appendingPathComponent(fileName)
     }
 
-    func loadCachedPayload() -> RemoteCoursesPayload? {
+    func loadCachedPayload() -> CoursesResponse? {
         do {
             let data = try Data(contentsOf: cacheURL)
-            return try decoder.decode(RemoteCoursesPayload.self, from: data)
+            return try decoder.decode(CoursesResponse.self, from: data)
         } catch {
+            print("Failed to load cached courses: \(error)")
             return nil
         }
     }
@@ -41,15 +29,17 @@ final class RemoteCoursesStore {
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
             guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                print("Invalid HTTP response")
                 return
             }
 
             // Validate decode before caching
-            _ = try decoder.decode(RemoteCoursesPayload.self, from: data)
+            _ = try decoder.decode(CoursesResponse.self, from: data)
 
             try data.write(to: cacheURL, options: [.atomic])
+            print("Cached \(url.lastPathComponent)")
         } catch {
-            // Silent fail for MVP
+            print("Failed to fetch courses: \(error)")
         }
     }
 

@@ -1,5 +1,23 @@
 import Foundation
 
+// MARK: - Course Version History
+
+struct CourseVersion: Codable, Identifiable, Hashable {
+    let startYear: Int
+    let endYear: Int
+    let yardage: Int
+    let notes: String
+
+    var id: String { "\(startYear)-\(endYear)" }
+
+    var yearRange: String {
+        if startYear == endYear {
+            return "\(startYear)"
+        }
+        return "\(startYear)-\(endYear)"
+    }
+}
+
 // MARK: - Course Model
 
 struct Course: Codable, Identifiable, Hashable {
@@ -15,11 +33,13 @@ struct Course: Codable, Identifiable, Hashable {
     let courseRating: Double?
     let slope: Int?
     let par: Int?
+    let yardage: Int?
     let tournamentCount: Int
     let roundCount: Int
-    let firstPlayed: Date?
-    let lastPlayed: Date?
+    let firstPlayed: String?
+    let lastPlayed: String?
     let recentTournaments: [RecentTournament]?
+    let versionHistory: [CourseVersion]?
 
     // Computed property for display location
     var displayLocation: String {
@@ -28,6 +48,14 @@ struct Course: Codable, Identifiable, Hashable {
         if let state = state { parts.append(state) }
         if let country = country { parts.append(country) }
         return parts.joined(separator: ", ")
+    }
+
+    // Computed property for short location
+    var locationShort: String {
+        if let state = state {
+            return "\(city ?? ""), \(state)"
+        }
+        return city ?? country ?? "Unknown"
     }
 
     // Computed property for USGA rating display
@@ -46,6 +74,33 @@ struct Course: Codable, Identifiable, Hashable {
         case 125..<135: return "Difficult"
         case 135...: return "Very Difficult"
         default: return "Unknown"
+        }
+    }
+
+    // Version history helpers
+    var hasVersionHistory: Bool {
+        versionHistory != nil && !(versionHistory?.isEmpty ?? true)
+    }
+
+    var currentVersion: CourseVersion? {
+        versionHistory?.last
+    }
+
+    var earliestVersion: CourseVersion? {
+        versionHistory?.first
+    }
+
+    var yardageIncrease: Int? {
+        guard let earliest = earliestVersion?.yardage,
+              let current = currentVersion?.yardage else {
+            return nil
+        }
+        return current - earliest
+    }
+
+    func version(for year: Int) -> CourseVersion? {
+        versionHistory?.first { version in
+            year >= version.startYear && year <= version.endYear
         }
     }
 }
@@ -98,4 +153,13 @@ struct LeaderboardEntry: Codable, Identifiable, Hashable {
             return "E"
         }
     }
+}
+
+// MARK: - Courses Response
+
+struct CoursesResponse: Codable {
+    let version: Int
+    let updatedAt: String
+    let count: Int
+    let courses: [Course]
 }
