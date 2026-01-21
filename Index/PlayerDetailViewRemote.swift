@@ -147,6 +147,7 @@ struct PlayerDetailViewRemote: View {
     }
 
     @State private var rangeMode: RangeMode = .recent
+    @State private var selectedPoint: IndexPointLite?
 
     var body: some View {
         ScrollView {
@@ -260,10 +261,86 @@ struct PlayerDetailViewRemote: View {
             if chartPoints.isEmpty {
                 Text(vm.isLoading ? "Loading…" : "Not enough data yet.")
                     .foregroundStyle(.secondary)
+                    .padding(.vertical, 40)
+            } else if rangeMode == .career {
+                // Career mode: Scrollable horizontal chart
+                ScrollView(.horizontal, showsIndicators: true) {
+                    Chart(chartPoints) {
+                        LineMark(
+                            x: .value("Date", $0.date),
+                            y: .value("Index", $0.index)
+                        )
+                        .foregroundStyle(Color.accentColor.gradient)
+                        .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                        .interpolationMethod(.catmullRom)
+
+                        PointMark(
+                            x: .value("Date", $0.date),
+                            y: .value("Index", $0.index)
+                        )
+                        .foregroundStyle(Color.accentColor)
+                        .symbol(.circle)
+                        .symbolSize(60)
+
+                        if let selected = selectedPoint {
+                            RuleMark(x: .value("Selected", selected.date))
+                                .foregroundStyle(.gray.opacity(0.3))
+                                .lineStyle(StrokeStyle(lineWidth: 1, dash: [5]))
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks(position: .leading) { value in
+                            AxisGridLine()
+                            AxisValueLabel {
+                                if let index = value.as(Double.self) {
+                                    Text(formatChartIndex(index))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                    .chartXAxis {
+                        AxisMarks(values: .stride(by: .month, count: 3)) { value in
+                            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                                .foregroundStyle(.secondary.opacity(0.3))
+                            AxisValueLabel {
+                                if let date = value.as(Date.self) {
+                                    VStack(alignment: .center, spacing: 1) {
+                                        Text(date, format: .dateTime.month(.abbreviated))
+                                            .font(.system(size: 10, weight: .medium))
+                                        Text(date, format: .dateTime.year(.twoDigits))
+                                            .font(.system(size: 9))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .chartAngleSelection(value: $selectedPoint)
+                    .chartYScale(domain: .automatic(includesZero: false, reversed: true))
+                    .frame(width: max(CGFloat(chartPoints.count) * 30, 400), height: 240)
+                }
+
+                if let selected = selectedPoint {
+                    HStack {
+                        Text(selected.date, format: .dateTime.month().day().year())
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text("Index: \(formatChartIndex(selected.index))")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                }
             } else {
+                // Recent mode: Last 20 rounds
                 Chart(chartPoints) {
                     LineMark(
-                        x: .value("Date", $0.date),
+                        x: .value("Round", $0.roundIndex),
                         y: .value("Index", $0.index)
                     )
                     .foregroundStyle(Color.accentColor.gradient)
@@ -271,12 +348,18 @@ struct PlayerDetailViewRemote: View {
                     .interpolationMethod(.catmullRom)
 
                     PointMark(
-                        x: .value("Date", $0.date),
+                        x: .value("Round", $0.roundIndex),
                         y: .value("Index", $0.index)
                     )
                     .foregroundStyle(Color.accentColor)
                     .symbol(.circle)
                     .symbolSize(60)
+
+                    if let selected = selectedPoint {
+                        RuleMark(x: .value("Selected", selected.roundIndex))
+                            .foregroundStyle(.gray.opacity(0.3))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [5]))
+                    }
                 }
                 .chartYAxis {
                     AxisMarks(position: .leading) { value in
@@ -291,24 +374,41 @@ struct PlayerDetailViewRemote: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: .month, count: rangeMode == .recent ? 6 : 24)) { value in
+                    AxisMarks { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                             .foregroundStyle(.secondary.opacity(0.3))
                         AxisValueLabel {
-                            if let date = value.as(Date.self) {
-                                VStack(alignment: .leading, spacing: 0) {
-                                    Text(date, format: .dateTime.month(.narrow))
-                                        .font(.system(size: 9, weight: .semibold))
-                                    Text(date, format: .dateTime.year(.twoDigits))
-                                        .font(.system(size: 8))
-                                        .foregroundStyle(.secondary)
-                                }
+                            if let idx = value.as(Int.self) {
+                                Text("\(idx)")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }
                 }
+                .chartAngleSelection(value: $selectedPoint)
                 .chartYScale(domain: .automatic(includesZero: false, reversed: true))
                 .frame(height: 240)
+
+                if let selected = selectedPoint {
+                    HStack {
+                        Text("Round \(selected.roundIndex)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("•")
+                            .foregroundStyle(.secondary)
+                        Text(selected.date, format: .dateTime.month().day().year())
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text("Index: \(formatChartIndex(selected.index))")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                }
             }
         }
         .padding(16)
@@ -342,14 +442,39 @@ struct PlayerDetailViewRemote: View {
     // MARK: - Helpers
 
     private var chartPoints: [IndexPointLite] {
-        guard let history = player.indexHistory else { return [] }
+        if rangeMode == .recent {
+            // Recent mode: Show last 20 rounds with round index
+            let last20 = Array(vm.rounds.prefix(20))
+            return last20.enumerated().map { idx, round in
+                // Calculate hypothetical index for each round
+                // (In reality, we'd need to recalculate index at each point)
+                // For now, use index history if available, otherwise interpolate
+                let roundDate = round.date
 
-        let sorted = history.sorted { $0.date < $1.date }
-        let limit = rangeMode == .recent ? 30 : sorted.count
-        let trimmed = Array(sorted.suffix(limit))
+                // Try to find closest index history point
+                if let history = player.indexHistory {
+                    let closest = history.min(by: { abs($0.date.timeIntervalSince(roundDate)) < abs($1.date.timeIntervalSince(roundDate)) })
+                    return IndexPointLite(
+                        date: roundDate,
+                        index: closest?.index ?? player.currentIndex ?? 0,
+                        roundIndex: idx + 1
+                    )
+                }
 
-        return trimmed.map {
-            IndexPointLite(date: $0.date, index: $0.index)
+                return IndexPointLite(
+                    date: roundDate,
+                    index: player.currentIndex ?? 0,
+                    roundIndex: idx + 1
+                )
+            }
+        } else {
+            // Career mode: Show all index history
+            guard let history = player.indexHistory else { return [] }
+            let sorted = history.sorted { $0.date < $1.date }
+
+            return sorted.enumerated().map { idx, point in
+                IndexPointLite(date: point.date, index: point.index, roundIndex: idx + 1)
+            }
         }
     }
 
@@ -357,16 +482,23 @@ struct PlayerDetailViewRemote: View {
         NavigationLink {
             RoundDetailView(round: r, playerName: player.name)
         } label: {
-            HStack {
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(r.tournament)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
                     Text("\(r.course) • R\(r.roundNumber)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer()
+
+                Spacer(minLength: 8)
+
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(r.score)")
                         .font(.title3.weight(.bold))
@@ -379,12 +511,14 @@ struct PlayerDetailViewRemote: View {
                             .monospacedDigit()
                     }
                 }
+
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
             .padding(.vertical, 6)
         }
+        .buttonStyle(.plain)
     }
 
     private func formatIndex(_ v: Double) -> String {
@@ -428,33 +562,34 @@ private struct IndexPointLite: Identifiable {
     let id = UUID()
     let date: Date
     let index: Double
+    let roundIndex: Int
 }
 // MARK: - Rounds List View
 
 struct RoundsListView: View {
     let title: String
     let rounds: [Round]
-    
+
     private var grouped: [(key: String, value: [Round])] {
         let f = DateFormatter()
         f.dateFormat = "yyyy"
-        
+
         let dict = Dictionary(grouping: rounds) { r in
             f.string(from: r.date)
         }
-        
+
         // Sort years descending
         return dict
             .map { ($0.key, $0.value.sorted(by: { $0.date > $1.date })) }
             .sorted(by: { $0.key > $1.key })
     }
-    
+
     var body: some View {
         List {
             ForEach(grouped, id: \.key) { year, items in
                 Section(year) {
                     ForEach(items) { r in
-                        RoundRowDetail(round: r)
+                        RoundRowDetail(round: r, playerName: title)
                     }
                 }
             }
@@ -466,40 +601,58 @@ struct RoundsListView: View {
 
 private struct RoundRowDetail: View {
     let round: Round
+    let playerName: String
 
     var body: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(round.tournament)
-                    .font(.subheadline.weight(.semibold))
-                Text("\(round.course) • R\(round.roundNumber)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(dateString(round.date))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+        NavigationLink {
+            RoundDetailView(round: round, playerName: playerName)
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(round.tournament)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
 
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("\(round.score)")
-                    .font(.title3.weight(.bold))
-                    .monospacedDigit()
-                HStack(spacing: 4) {
-                    Text("Par \(round.par)")
+                    Text("\(round.course) • R\(round.roundNumber)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    if let diff = round.differential {
-                        Text("• Diff " + formatDiff(diff))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(dateString(round.date))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(round.score)")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.primary)
+                        .monospacedDigit()
+                    HStack(spacing: 4) {
+                        Text("Par \(round.par)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .monospacedDigit()
+                        if let diff = round.differential {
+                            Text("• Diff " + formatDiff(diff))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
                     }
                 }
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
+            .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
+        .buttonStyle(.plain)
     }
 
     private func formatDiff(_ v: Double) -> String {
