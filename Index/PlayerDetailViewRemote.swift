@@ -515,18 +515,18 @@ struct PlayerDetailViewRemote: View {
             RoundDetailView(round: r, playerName: player.name)
         } label: {
             HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(r.tournament)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .multilineTextAlignment(.leading)
 
                     Text("\(r.course) • R\(r.roundNumber)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .multilineTextAlignment(.leading)
                 }
 
                 Spacer(minLength: 8)
@@ -544,8 +544,9 @@ struct PlayerDetailViewRemote: View {
                     }
                 }
             }
-            .padding(.vertical, 6)
+            .padding(.vertical, 8)
         }
+        .buttonStyle(.plain)
     }
 
     private func formatIndex(_ v: Double) -> String {
