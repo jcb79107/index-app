@@ -192,14 +192,16 @@ struct CourseDetailView: View {
                     }
 
                     if let firstPlayed = course.firstPlayed,
-                       let lastPlayed = course.lastPlayed {
+                       let lastPlayed = course.lastPlayed,
+                       let firstDate = parseDate(firstPlayed),
+                       let lastDate = parseDate(lastPlayed) {
                         HStack(spacing: 16) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("FIRST PLAYED")
                                     .font(.caption2.weight(.bold))
                                     .foregroundStyle(.secondary)
                                     .tracking(0.5)
-                                Text(firstPlayed, style: .date)
+                                Text(firstDate, style: .date)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundStyle(.primary)
                             }
@@ -211,7 +213,7 @@ struct CourseDetailView: View {
                                     .font(.caption2.weight(.bold))
                                     .foregroundStyle(.secondary)
                                     .tracking(0.5)
-                                Text(lastPlayed, style: .date)
+                                Text(lastDate, style: .date)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundStyle(.primary)
                             }
@@ -246,6 +248,13 @@ struct CourseDetailView: View {
         .sheet(isPresented: $showingSimulation) {
             SimulationView(preselectedCourse: course)
         }
+    }
+
+    // MARK: - Helper Functions
+
+    private func parseDate(_ dateString: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        return formatter.date(from: dateString)
     }
 
     // MARK: - Version History Section

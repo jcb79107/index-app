@@ -181,10 +181,7 @@ struct RoundDetailView: View {
                 courseInfoRow(icon: "circle.hexagongrid.fill", label: "Par", value: "\(round.par)")
 
                 if let yardage = round.yardage, yardage > 0 {
-                    let formatter = NumberFormatter()
-                    formatter.numberStyle = .decimal
-                    let yardageStr = formatter.string(from: NSNumber(value: yardage)) ?? "\(yardage)"
-                    courseInfoRow(icon: "ruler.fill", label: "Yardage", value: "\(yardageStr) yards")
+                    courseInfoRow(icon: "ruler.fill", label: "Yardage", value: formatYardage(yardage))
                 }
 
                 if let courseRating = round.courseRating, courseRating > 0 {
@@ -370,6 +367,13 @@ struct RoundDetailView: View {
         return .red
     }
 
+    private func formatYardage(_ yardage: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        let formatted = formatter.string(from: NSNumber(value: yardage)) ?? "\(yardage)"
+        return "\(formatted) yards"
+    }
+
     private func differentialColor(_ diff: Double) -> Color {
         if diff < 0 { return .green }
         if diff == 0 { return .primary }
@@ -392,6 +396,7 @@ struct RoundDetailView: View {
                 differential: -2.1,
                 courseRating: 76.2,
                 slope: 137,
+                yardage: 7545,
                 fieldAverage: 73.5,
                 fieldSize: 156,
                 notes: nil

@@ -506,11 +506,13 @@ final class TournamentPlayerRoundsViewModel: ObservableObject {
                 courseRating: 78.1,
                 slope: 137,
                 par: 72,
+                yardage: 7545,
                 tournamentCount: 85,
                 roundCount: 7241,
                 firstPlayed: nil,
                 lastPlayed: nil,
-                recentTournaments: nil
+                recentTournaments: nil,
+                versionHistory: nil
             )
         )
     }
