@@ -543,6 +543,10 @@ struct PlayerDetailViewRemote: View {
                             .monospacedDigit()
                     }
                 }
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
             .padding(.vertical, 8)
         }
