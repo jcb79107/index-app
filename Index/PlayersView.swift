@@ -24,7 +24,15 @@ struct PlayersView: View {
                     if !vm.favoritePlayers.isEmpty && !vm.filters.showFavoritesOnly && vm.filters.groupBy == .none {
                         Section {
                             ForEach(vm.favoritePlayers) { player in
-                                playerRow(player)
+                                playerRow(player, isFavorite: true)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button {
+                                            vm.toggleFavorite(player)
+                                        } label: {
+                                            Label("Unfavorite", systemImage: "star.slash")
+                                        }
+                                        .tint(.orange)
+                                    }
                             }
                         } header: {
                             HStack {
@@ -47,13 +55,31 @@ struct PlayersView: View {
                         let playersToShow = vm.filters.showFavoritesOnly ? vm.favoritePlayers : vm.nonFavoritePlayers
 
                         ForEach(playersToShow) { player in
-                            playerRow(player)
+                            playerRow(player, isFavorite: vm.isFavorite(player))
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button {
+                                        vm.toggleFavorite(player)
+                                    } label: {
+                                        Label(vm.isFavorite(player) ? "Unfavorite" : "Favorite",
+                                              systemImage: vm.isFavorite(player) ? "star.slash" : "star.fill")
+                                    }
+                                    .tint(.yellow)
+                                }
                         }
                     } else {
                         ForEach(vm.groupedPlayers, id: \.0) { groupName, players in
                             Section(groupName.isEmpty ? "Players" : groupName) {
                                 ForEach(players) { player in
-                                    playerRow(player)
+                                    playerRow(player, isFavorite: vm.isFavorite(player))
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                            Button {
+                                                vm.toggleFavorite(player)
+                                            } label: {
+                                                Label(vm.isFavorite(player) ? "Unfavorite" : "Favorite",
+                                                      systemImage: vm.isFavorite(player) ? "star.slash" : "star.fill")
+                                            }
+                                            .tint(.yellow)
+                                        }
                                 }
                             }
                         }
@@ -133,99 +159,105 @@ struct PlayersView: View {
 
     // MARK: - Player Row - Redesigned for beauty and clarity
 
-    private func playerRow(_ player: RemotePlayer) -> some View {
-        HStack(spacing: 16) {
-            // Avatar - Now with actual photo!
-            if let photoURL = player.photoURL, let url = URL(string: photoURL) {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 52, height: 52)
-                        .clipShape(Circle())
-                        .overlay(
+    private func playerRow(_ player: RemotePlayer, isFavorite: Bool = false) -> some View {
+        NavigationLink {
+            PlayerDetailViewRemote(player: player)
+        } label: {
+            HStack(spacing: 16) {
+                // Avatar - Now with actual photo and favorite badge!
+                ZStack(alignment: .bottomTrailing) {
+                    if let photoURL = player.photoURL, let url = URL(string: photoURL) {
+                        AsyncImage(url: url) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 52, height: 52)
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .strokeBorder(isFavorite ? Color.yellow.opacity(0.4) : Color.accentColor.opacity(0.2), lineWidth: 2)
+                                )
+                        } placeholder: {
                             Circle()
-                                .strokeBorder(Color.accentColor.opacity(0.2), lineWidth: 2)
-                        )
-                } placeholder: {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.accentColor.opacity(0.2), Color.accentColor.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 52, height: 52)
-                        .overlay {
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.accentColor.opacity(0.2), Color.accentColor.opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 52, height: 52)
+                                .overlay {
+                                    Text(initials(from: player.name))
+                                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(.primary.opacity(0.7))
+                                }
+                        }
+                    } else {
+                        // Fallback avatar
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.accentColor.opacity(0.2), Color.accentColor.opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+
                             Text(initials(from: player.name))
                                 .font(.system(size: 18, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.primary.opacity(0.7))
                         }
-                }
-            } else {
-                // Fallback avatar
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.accentColor.opacity(0.2), Color.accentColor.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                        .frame(width: 52, height: 52)
+                        .overlay(
+                            Circle()
+                                .strokeBorder(isFavorite ? Color.yellow.opacity(0.4) : Color.accentColor.opacity(0.2), lineWidth: 2)
                         )
-
-                    Text(initials(from: player.name))
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary.opacity(0.7))
-                }
-                .frame(width: 52, height: 52)
-            }
-
-            // Player info - wrapped in NavigationLink
-            NavigationLink {
-                PlayerDetailViewRemote(player: player)
-            } label: {
-                HStack(spacing: 8) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(player.name)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(.primary)
-
-                        Text(subtitle(for: player))
-                            .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
                     }
 
-                    Spacer()
+                    // Star badge for favorites
+                    if isFavorite {
+                        ZStack {
+                            Circle()
+                                .fill(Color.yellow)
+                                .frame(width: 20, height: 20)
 
-                    // Index display
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(indexText(for: player))
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(indexColor(for: player.currentIndex))
-                            .monospacedDigit()
-
-                        Text("INDEX")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                            .tracking(0.5)
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.white)
+                        }
+                        .offset(x: 2, y: 2)
                     }
                 }
-            }
 
-            // Favorite button - always visible and tappable
-            Button {
-                vm.toggleFavorite(player)
-            } label: {
-                Image(systemName: vm.isFavorite(player) ? "star.fill" : "star")
-                    .font(.system(size: 20))
-                    .foregroundStyle(vm.isFavorite(player) ? .yellow : .secondary.opacity(0.4))
-                    .frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(player.name)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.primary)
+
+                    Text(subtitle(for: player))
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                // Index display
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(indexText(for: player))
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundStyle(indexColor(for: player.currentIndex))
+                        .monospacedDigit()
+
+                    Text("INDEX")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .tracking(0.5)
+                }
             }
-            .buttonStyle(.plain)
+            .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
     }
 
     // MARK: - Empty State
