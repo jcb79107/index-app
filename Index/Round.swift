@@ -11,6 +11,7 @@ struct Round: Identifiable, Codable, Hashable {
     let differential: Double?
     let courseRating: Double?
     let slope: Int?
+    let yardage: Int?
     let fieldAverage: Double?
     let fieldSize: Int?
 

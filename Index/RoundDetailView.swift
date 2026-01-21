@@ -180,6 +180,13 @@ struct RoundDetailView: View {
 
                 courseInfoRow(icon: "circle.hexagongrid.fill", label: "Par", value: "\(round.par)")
 
+                if let yardage = round.yardage, yardage > 0 {
+                    let formatter = NumberFormatter()
+                    formatter.numberStyle = .decimal
+                    let yardageStr = formatter.string(from: NSNumber(value: yardage)) ?? "\(yardage)"
+                    courseInfoRow(icon: "ruler.fill", label: "Yardage", value: "\(yardageStr) yards")
+                }
+
                 if let courseRating = round.courseRating, courseRating > 0 {
                     courseInfoRow(icon: "star.fill", label: "Rating", value: String(format: "%.1f", courseRating))
                 }
