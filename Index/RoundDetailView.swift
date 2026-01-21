@@ -107,13 +107,49 @@ struct RoundDetailView: View {
                 .font(.headline)
                 .foregroundStyle(.primary)
 
-            // Round Number Badge
-            HStack {
-                Image(systemName: "flag.circle.fill")
-                    .foregroundStyle(Color.accentColor)
-                Text("Round \(round.roundNumber)")
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
+            VStack(spacing: 12) {
+                // Round Number
+                HStack {
+                    Image(systemName: "flag.circle.fill")
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 24)
+                    Text("Round")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("\(round.roundNumber)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                }
+
+                // Player name
+                HStack {
+                    Image(systemName: "person.fill")
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 24)
+                    Text("Player")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(playerName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                }
+
+                // Score to Par summary
+                let toPar = round.score - round.par
+                HStack {
+                    Image(systemName: "target")
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 24)
+                    Text("Performance")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(performanceSummary(toPar: toPar))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(toParColor(toPar))
+                }
             }
         }
         .padding(20)
@@ -128,7 +164,7 @@ struct RoundDetailView: View {
     private var courseDetailsCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Image(systemName: "building.2.crop.circle.fill")
+                Image(systemName: "figure.golf")
                     .font(.title3)
                     .foregroundStyle(Color.accentColor)
                 Text("Course Information")
@@ -136,7 +172,13 @@ struct RoundDetailView: View {
             }
 
             VStack(spacing: 12) {
-                courseInfoRow(icon: "flag.fill", label: "Course", value: round.course)
+                courseInfoRow(icon: "flag.2.crossed.fill", label: "Course", value: parsedCourseName)
+
+                if !parsedLocation.isEmpty {
+                    courseInfoRow(icon: "mappin.circle.fill", label: "Location", value: parsedLocation)
+                }
+
+                courseInfoRow(icon: "circle.hexagongrid.fill", label: "Par", value: "\(round.par)")
 
                 if let courseRating = round.courseRating, courseRating > 0 {
                     courseInfoRow(icon: "star.fill", label: "Rating", value: String(format: "%.1f", courseRating))
@@ -145,8 +187,6 @@ struct RoundDetailView: View {
                 if let slope = round.slope, slope > 0 {
                     courseInfoRow(icon: "chart.line.uptrend.xyaxis", label: "Slope", value: "\(slope)")
                 }
-
-                courseInfoRow(icon: "circle.hexagongrid.fill", label: "Par", value: "\(round.par)")
             }
         }
         .padding(20)
@@ -248,6 +288,36 @@ struct RoundDetailView: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Color(.tertiarySystemGroupedBackground))
         }
+    }
+
+    // MARK: - Computed Properties
+
+    private var parsedCourseName: String {
+        // Parse "Course Name - City, State, Country" format
+        if let dashIndex = round.course.firstIndex(of: "-") {
+            let name = round.course[..<dashIndex].trimmingCharacters(in: .whitespaces)
+            return name
+        }
+        return round.course
+    }
+
+    private var parsedLocation: String {
+        // Parse "Course Name - City, State, Country" format
+        if let dashIndex = round.course.firstIndex(of: "-") {
+            let afterDash = round.course[round.course.index(after: dashIndex)...].trimmingCharacters(in: .whitespaces)
+            return String(afterDash)
+        }
+        return ""
+    }
+
+    private func performanceSummary(toPar: Int) -> String {
+        if toPar < -5 { return "Exceptional (\(formatToPar(toPar)))" }
+        if toPar < -2 { return "Excellent (\(formatToPar(toPar)))" }
+        if toPar < 0 { return "Very Good (\(formatToPar(toPar)))" }
+        if toPar == 0 { return "Even Par" }
+        if toPar <= 2 { return "Good (\(formatToPar(toPar)))" }
+        if toPar <= 5 { return "Solid (\(formatToPar(toPar)))" }
+        return "Challenging (\(formatToPar(toPar)))"
     }
 
     // MARK: - Formatting & Colors
