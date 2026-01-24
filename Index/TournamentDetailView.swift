@@ -458,13 +458,11 @@ final class TournamentPlayerRoundsViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
 
-        // Load player's rounds
-        await roundsViewModel.loadRounds(for: playerSlug)
-
-        // Get player name
+        // Get player data (includes embedded rounds)
         let allPlayers = RemotePlayersStore.shared.players()
         if let player = allPlayers.first(where: { $0.slug == playerSlug }) {
             playerName = player.name
+            roundsViewModel.loadRounds(from: player)
         }
 
         // Filter to tournament rounds

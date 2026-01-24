@@ -4,10 +4,6 @@ import SwiftUI
 struct IndexApp: App {
 
     // GitHub Pages JSON endpoints
-    private let roundsURL = URL(
-        string: "https://jcb79107.github.io/index-data/rounds.json"
-    )!
-
     private let playersURL = URL(
         string: "https://jcb79107.github.io/index-data/players.json"
     )!
@@ -20,8 +16,7 @@ struct IndexApp: App {
         WindowGroup {
             ContentView()
                 .task {
-                    // Fetch data on app launch
-                    await RemoteRoundsStore.shared.fetchAndCache(from: roundsURL)
+                    // Fetch data on app launch (rounds are now embedded in players.json)
                     await RemotePlayersStore.shared.fetchAndCache(from: playersURL)
                     await RemoteCoursesStore.shared.fetchAndCache(from: coursesURL)
                 }

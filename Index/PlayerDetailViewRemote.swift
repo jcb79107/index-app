@@ -3,16 +3,6 @@ import Foundation
 import Combine
 import Charts
 
-// MARK: - Remote payload
-
-struct RemoteRoundsPayloadV1: Codable {
-    let version: Int
-    let updatedAt: Date
-    let slug: String
-    let roundCount: Int
-    let rounds: [Round]
-}
-
 // MARK: - ViewModel
 
 @MainActor
@@ -20,118 +10,16 @@ final class PlayerRoundsViewModel: ObservableObject {
     @Published var rounds: [Round] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
-    @Published var payloadUpdatedAt: Date? = nil
 
-    private let decoder: JSONDecoder = {
-        let d = JSONDecoder()
-        d.dateDecodingStrategy = .iso8601
-        return d
-    }()
+    func loadRounds(from player: RemotePlayer) {
+        // Simply use the embedded rounds from the player object
+        rounds = player.recentRounds ?? []
 
-    private let encoder: JSONEncoder = {
-        let e = JSONEncoder()
-        e.dateEncodingStrategy = .iso8601
-        e.outputFormatting = [.prettyPrinted, .sortedKeys]
-        return e
-    }()
-
-    private let lastRefreshPrefix = "lastRefreshDay_"
-    private let lastSeenDataKey = "lastSeenDataUpdatedAtISO"
-
-    func loadRounds(for slug: String) async {
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
-
-        // 1) Load cached immediately
-        if let cached = loadCachedPayload(for: slug) {
-            applyPayload(cached)
-        }
-
-        // 2) Only refresh once per day
-        guard shouldRefreshToday(for: slug) else { return }
-
-        let url = URL(string: "https://jcb79107.github.io/index-data/rounds/\(slug).json")!
-
-        do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            guard let http = response as? HTTPURLResponse,
-                  (200...299).contains(http.statusCode) else {
-                if rounds.isEmpty { errorMessage = "Network error loading rounds." }
-                return
-            }
-
-            let payload = try decoder.decode(RemoteRoundsPayloadV1.self, from: data)
-
-            saveCachedPayload(payload, for: slug)
-            markRefreshedToday(for: slug)
-            applyPayload(payload)
-
-        } catch {
-            if rounds.isEmpty { errorMessage = "Failed to load rounds." }
+        if rounds.isEmpty {
+            errorMessage = nil  // Not an error, just no rounds
         }
     }
 
-    // MARK: - Apply payload (FIXED)
-
-    private func applyPayload(_ payload: RemoteRoundsPayloadV1) {
-        payloadUpdatedAt = payload.updatedAt
-        rounds = payload.rounds.sorted(by: { $0.date > $1.date })
-
-        let iso = ISO8601DateFormatter().string(from: payload.updatedAt)
-
-        // Only update Settings if this payload is newer
-        if let existing = UserDefaults.standard.string(forKey: lastSeenDataKey),
-           let existingDate = ISO8601DateFormatter().date(from: existing),
-           existingDate >= payload.updatedAt {
-            return
-        }
-
-        UserDefaults.standard.set(iso, forKey: lastSeenDataKey)
-    }
-
-    // MARK: - Cache
-
-    private func cacheURL(for slug: String) -> URL {
-        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-        return dir.appendingPathComponent("rounds_\(slug)_cache.json")
-    }
-
-    private func loadCachedPayload(for slug: String) -> RemoteRoundsPayloadV1? {
-        do {
-            let data = try Data(contentsOf: cacheURL(for: slug))
-            return try decoder.decode(RemoteRoundsPayloadV1.self, from: data)
-        } catch {
-            return nil
-        }
-    }
-
-    private func saveCachedPayload(_ payload: RemoteRoundsPayloadV1, for slug: String) {
-        do {
-            let data = try encoder.encode(payload)
-            try data.write(to: cacheURL(for: slug), options: [.atomic])
-        } catch {}
-    }
-
-    // MARK: - Daily refresh
-
-    private func refreshKey(for slug: String) -> String {
-        "\(lastRefreshPrefix)\(slug)"
-    }
-
-    private func todayKey() -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: Date())
-    }
-
-    private func shouldRefreshToday(for slug: String) -> Bool {
-        UserDefaults.standard.string(forKey: refreshKey(for: slug)) != todayKey()
-    }
-
-    private func markRefreshedToday(for slug: String) {
-        UserDefaults.standard.set(todayKey(), forKey: refreshKey(for: slug))
-    }
 }
 
 // MARK: - View
@@ -149,6 +37,7 @@ struct PlayerDetailViewRemote: View {
     @State private var rangeMode: RangeMode = .recent
     @State private var selectedDate: Date?
     @State private var selectedRoundIndex: Int?
+    @State private var isRefreshing = false
 
     var body: some View {
         ScrollView {
@@ -193,12 +82,6 @@ struct PlayerDetailViewRemote: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
-
-                        if let updated = vm.payloadUpdatedAt {
-                            Text("Updated \(dateTime(updated))")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
                     }
 
                     Spacer()
@@ -212,8 +95,8 @@ struct PlayerDetailViewRemote: View {
         }
         .navigationTitle("Player Profile")
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            await vm.loadRounds(for: player.slug)
+        .onAppear {
+            vm.loadRounds(from: player)
         }
     }
 
@@ -460,8 +343,18 @@ struct PlayerDetailViewRemote: View {
                 }
             }
 
-            if let msg = vm.errorMessage {
-                Text(msg).foregroundStyle(.secondary)
+            if vm.isLoading && vm.rounds.isEmpty {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .padding(.vertical, 20)
+                    Spacer()
+                }
+            } else if vm.rounds.isEmpty {
+                Text("No rounds found")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
             } else {
                 ForEach(vm.rounds.prefix(5)) { roundRow($0) }
             }

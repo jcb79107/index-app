@@ -24,9 +24,10 @@ struct RemotePlayer: Codable, Identifiable, Hashable {
     let roundCount: Int?
     let indexHistory: [IndexPoint]?
     let photoURL: String?
+    let recentRounds: [Round]?  // NEW: Embedded last 20 rounds
 
     enum CodingKeys: String, CodingKey {
-        case slug, name, lastRoundDate, tour, roundCount, indexHistory, photoURL
+        case slug, name, lastRoundDate, tour, roundCount, indexHistory, photoURL, recentRounds
         case currentIndex = "index"  // JSON field is "index", Swift property is "currentIndex"
     }
 
