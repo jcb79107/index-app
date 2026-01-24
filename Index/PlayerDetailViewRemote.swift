@@ -10,17 +10,62 @@ final class PlayerRoundsViewModel: ObservableObject {
     @Published var rounds: [Round] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
+    @Published var fullHistoryLoaded: Bool = false
+
+    private let decoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        return d
+    }()
 
     func loadRounds(from player: RemotePlayer) {
-        // Simply use the embedded rounds from the player object
+        // Use embedded recent rounds (last 20) for fast initial display
         rounds = player.recentRounds ?? []
+        fullHistoryLoaded = false
 
         if rounds.isEmpty {
             errorMessage = nil  // Not an error, just no rounds
         }
     }
 
+    func loadFullHistory(for slug: String) async {
+        guard !fullHistoryLoaded else { return }
+
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        let url = URL(string: "https://jcb79107.github.io/index-data/rounds/\(slug).json")!
+
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let http = response as? HTTPURLResponse,
+                  (200...299).contains(http.statusCode) else {
+                errorMessage = "Failed to load full history"
+                return
+            }
+
+            let payload = try decoder.decode(RemoteRoundsPayloadV1.self, from: data)
+            rounds = payload.rounds.sorted(by: { $0.date > $1.date })
+            fullHistoryLoaded = true
+
+        } catch {
+            errorMessage = "Failed to load full history: \(error.localizedDescription)"
+        }
+    }
 }
+
+// MARK: - Remote payload for individual round files
+
+struct RemoteRoundsPayloadV1: Codable {
+    let version: Int
+    let updatedAt: Date
+    let slug: String
+    let roundCount: Int
+    let rounds: [Round]
+}
+
+
 
 // MARK: - View
 
@@ -338,7 +383,12 @@ struct PlayerDetailViewRemote: View {
                 Spacer()
                 if !vm.rounds.isEmpty {
                     NavigationLink("See all") {
-                        RoundsListView(title: player.name, rounds: vm.rounds)
+                        RoundsListView(
+                            title: player.name,
+                            slug: player.slug,
+                            initialRounds: vm.rounds,
+                            viewModel: vm
+                        )
                     }
                 }
             }
@@ -357,6 +407,28 @@ struct PlayerDetailViewRemote: View {
                     .padding(.vertical, 20)
             } else {
                 ForEach(vm.rounds.prefix(5)) { roundRow($0) }
+
+                if !vm.fullHistoryLoaded && vm.rounds.count >= 20 {
+                    Button {
+                        Task {
+                            await vm.loadFullHistory(for: player.slug)
+                        }
+                    } label: {
+                        HStack {
+                            Spacer()
+                            if vm.isLoading {
+                                ProgressView()
+                                    .padding(.horizontal, 8)
+                            }
+                            Text(vm.isLoading ? "Loading..." : "Load Full History")
+                                .font(.subheadline.weight(.medium))
+                            Spacer()
+                        }
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(vm.isLoading)
+                }
             }
         }
         .padding(16)
@@ -493,13 +565,15 @@ private struct IndexPointLite: Identifiable {
 
 struct RoundsListView: View {
     let title: String
-    let rounds: [Round]
+    let slug: String
+    let initialRounds: [Round]
+    @ObservedObject var viewModel: PlayerRoundsViewModel
 
     private var grouped: [(key: String, value: [Round])] {
         let f = DateFormatter()
         f.dateFormat = "yyyy"
 
-        let dict = Dictionary(grouping: rounds) { r in
+        let dict = Dictionary(grouping: viewModel.rounds) { r in
             f.string(from: r.date)
         }
 
@@ -511,6 +585,23 @@ struct RoundsListView: View {
 
     var body: some View {
         List {
+            if viewModel.isLoading && !viewModel.fullHistoryLoaded {
+                Section {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 12) {
+                            ProgressView()
+                            Text("Loading full history...")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 20)
+                        Spacer()
+                    }
+                }
+                .listRowBackground(Color.clear)
+            }
+
             ForEach(grouped, id: \.key) { year, items in
                 Section(year) {
                     ForEach(items) { r in
@@ -518,9 +609,25 @@ struct RoundsListView: View {
                     }
                 }
             }
+
+            if viewModel.fullHistoryLoaded {
+                Section {
+                    Text("Showing all \(viewModel.rounds.count) rounds")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .multilineTextAlignment(.center)
+                }
+                .listRowBackground(Color.clear)
+            }
         }
         .navigationTitle("Rounds")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            if !viewModel.fullHistoryLoaded {
+                await viewModel.loadFullHistory(for: slug)
+            }
+        }
     }
 }
 
