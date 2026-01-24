@@ -407,28 +407,6 @@ struct PlayerDetailViewRemote: View {
                     .padding(.vertical, 20)
             } else {
                 ForEach(vm.rounds.prefix(5)) { roundRow($0) }
-
-                if !vm.fullHistoryLoaded && vm.rounds.count >= 20 {
-                    Button {
-                        Task {
-                            await vm.loadFullHistory(for: player.slug)
-                        }
-                    } label: {
-                        HStack {
-                            Spacer()
-                            if vm.isLoading {
-                                ProgressView()
-                                    .padding(.horizontal, 8)
-                            }
-                            Text(vm.isLoading ? "Loading..." : "Load Full History")
-                                .font(.subheadline.weight(.medium))
-                            Spacer()
-                        }
-                        .padding(.vertical, 12)
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(vm.isLoading)
-                }
             }
         }
         .padding(16)
