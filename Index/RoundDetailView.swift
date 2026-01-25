@@ -10,6 +10,11 @@ struct RoundDetailView: View {
                 // Hero Header Card
                 heroCard
 
+                // Tournament Result Card (only if position/earnings available)
+                if hasTournamentContext {
+                    tournamentResultCard
+                }
+
                 // Score Breakdown
                 scoreBreakdownCard
 
@@ -24,6 +29,119 @@ struct RoundDetailView: View {
         .navigationTitle("Round Details")
         .navigationBarTitleDisplayMode(.inline)
         .background(Color(.systemGroupedBackground))
+    }
+
+    // MARK: - Tournament Result Card
+
+    private var hasTournamentContext: Bool {
+        round.position != nil || round.earnings != nil || round.fedexPoints != nil
+    }
+
+    private var tournamentResultCard: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Image(systemName: "trophy.fill")
+                    .font(.title3)
+                    .foregroundStyle(.yellow)
+                Text("Tournament Result")
+                    .font(.headline)
+            }
+
+            // Position - THE STAR OF THE SHOW
+            if let position = round.position {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("FINISH")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .tracking(1.2)
+
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(formatPosition(position))
+                            .font(.system(size: 56, weight: .bold, design: .rounded))
+                            .foregroundStyle(positionColor(position))
+                            .monospacedDigit()
+
+                        Text(positionSuffix(position))
+                            .font(.title2.weight(.semibold))
+                            .foregroundStyle(positionColor(position).opacity(0.7))
+                    }
+
+                    Text(positionDescription(position))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12)
+            }
+
+            Divider()
+                .opacity(0.5)
+
+            // Earnings & FedEx Points Grid
+            HStack(spacing: 20) {
+                if let earnings = round.earnings {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Prize Money", systemImage: "dollarsign.circle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .labelStyle(.iconOnly)
+                            .font(.title3)
+                            .foregroundStyle(.green)
+                        +
+                        Text(" Prize Money")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Text(formatEarnings(earnings))
+                            .font(.title.weight(.bold))
+                            .foregroundStyle(.primary)
+                            .monospacedDigit()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if let fedexPoints = round.fedexPoints {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("FedEx Cup", systemImage: "chart.line.uptrend.xyaxis.circle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .labelStyle(.iconOnly)
+                            .font(.title3)
+                            .foregroundStyle(.blue)
+                        +
+                        Text(" FedEx Cup")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(formatFedExPoints(fedexPoints))
+                                .font(.title.weight(.bold))
+                                .foregroundStyle(.primary)
+                                .monospacedDigit()
+                            Text("pts")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .padding(24)
+        .background {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(.secondarySystemGroupedBackground),
+                            Color(.secondarySystemGroupedBackground).opacity(0.8)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .shadow(color: positionShadowColor, radius: 12, x: 0, y: 6)
+        }
     }
 
     // MARK: - Hero Card
@@ -380,6 +498,125 @@ struct RoundDetailView: View {
         if diff <= 3 { return .orange }
         return .red
     }
+
+    // MARK: - Tournament Context Formatting
+
+    private func formatPosition(_ position: String) -> String {
+        // Extract numeric part from "T5" or "1" or "CUT"
+        if position == "CUT" || position == "MC" {
+            return "MC"
+        }
+        if position == "WD" {
+            return "WD"
+        }
+        // Remove T prefix for display
+        return position.replacingOccurrences(of: "T", with: "")
+    }
+
+    private func positionSuffix(_ position: String) -> String {
+        // Add ordinal suffix (1st, 2nd, 3rd, etc.)
+        if position == "CUT" || position == "MC" {
+            return ""
+        }
+        if position == "WD" {
+            return ""
+        }
+
+        let numStr = position.replacingOccurrences(of: "T", with: "")
+        guard let num = Int(numStr) else { return "" }
+
+        let suffix: String
+        switch num % 10 {
+        case 1 where num % 100 != 11:
+            suffix = "st"
+        case 2 where num % 100 != 12:
+            suffix = "nd"
+        case 3 where num % 100 != 13:
+            suffix = "rd"
+        default:
+            suffix = "th"
+        }
+
+        return suffix
+    }
+
+    private func positionDescription(_ position: String) -> String {
+        if position == "CUT" || position == "MC" {
+            return "Missed the cut"
+        }
+        if position == "WD" {
+            return "Withdrew from tournament"
+        }
+
+        let isTied = position.hasPrefix("T")
+        let numStr = position.replacingOccurrences(of: "T", with: "")
+        guard let num = Int(numStr) else { return "" }
+
+        if num == 1 {
+            return isTied ? "Tied for first place" : "Tournament Winner 🏆"
+        } else if num <= 3 {
+            return isTied ? "Tied for top 3 finish" : "Top 3 finish"
+        } else if num <= 10 {
+            return isTied ? "Tied for top 10 finish" : "Top 10 finish"
+        } else if num <= 25 {
+            return isTied ? "Tied for top 25" : "Top 25 finish"
+        } else {
+            return isTied ? "Tied finish" : ""
+        }
+    }
+
+    private func positionColor(_ position: String) -> Color {
+        if position == "CUT" || position == "MC" || position == "WD" {
+            return .secondary
+        }
+
+        let numStr = position.replacingOccurrences(of: "T", with: "")
+        guard let num = Int(numStr) else { return .primary }
+
+        switch num {
+        case 1:
+            return .yellow  // Gold for winner
+        case 2:
+            return .gray    // Silver for 2nd
+        case 3:
+            return .orange  // Bronze for 3rd
+        case 4...10:
+            return .blue    // Blue for top 10
+        case 11...25:
+            return .green   // Green for top 25
+        default:
+            return .primary
+        }
+    }
+
+    private var positionShadowColor: Color {
+        guard let position = round.position else { return .clear }
+
+        let numStr = position.replacingOccurrences(of: "T", with: "")
+        guard let num = Int(numStr) else { return .clear }
+
+        if num == 1 {
+            return .yellow.opacity(0.2)
+        } else if num <= 3 {
+            return .orange.opacity(0.15)
+        }
+        return .clear
+    }
+
+    private func formatEarnings(_ earnings: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: earnings)) ?? "$\(Int(earnings))"
+    }
+
+    private func formatFedExPoints(_ points: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: points)) ?? "\(Int(points))"
+    }
 }
 
 #Preview {
@@ -389,8 +626,8 @@ struct RoundDetailView: View {
                 id: UUID(),
                 date: Date(),
                 tournament: "Masters Tournament",
-                course: "Augusta National Golf Club",
-                roundNumber: 1,
+                course: "Augusta National Golf Club - Augusta, GA",
+                roundNumber: 4,
                 score: 71,
                 par: 72,
                 differential: -2.1,
@@ -399,6 +636,10 @@ struct RoundDetailView: View {
                 yardage: 7545,
                 fieldAverage: 73.5,
                 fieldSize: 156,
+                position: "T5",
+                earnings: 450000.0,
+                fedexPoints: 110.0,
+                worldRanking: nil,
                 notes: nil
             ),
             playerName: "Tiger Woods"

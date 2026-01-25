@@ -459,11 +459,17 @@ struct PlayerDetailViewRemote: View {
         } label: {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(r.tournament)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .multilineTextAlignment(.leading)
+                    HStack(spacing: 8) {
+                        Text(r.tournament)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+
+                        // Position badge for notable finishes
+                        if let position = r.position, shouldShowPositionBadge(position) {
+                            positionBadge(position)
+                        }
+                    }
 
                     Text("\(r.course) • R\(r.roundNumber)")
                         .font(.caption)
@@ -494,6 +500,49 @@ struct PlayerDetailViewRemote: View {
             .padding(.vertical, 8)
         }
         .buttonStyle(.plain)
+    }
+
+    private func shouldShowPositionBadge(_ position: String) -> Bool {
+        // Only show badge for top 10 finishes or winner
+        if position == "CUT" || position == "MC" || position == "WD" {
+            return false
+        }
+        let numStr = position.replacingOccurrences(of: "T", with: "")
+        guard let num = Int(numStr) else { return false }
+        return num <= 10
+    }
+
+    private func positionBadge(_ position: String) -> some View {
+        let numStr = position.replacingOccurrences(of: "T", with: "")
+        let displayText = position.hasPrefix("T") ? "T\(numStr)" : numStr
+
+        return Text(displayText)
+            .font(.system(size: 9, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background {
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(positionBadgeColor(position))
+            }
+    }
+
+    private func positionBadgeColor(_ position: String) -> Color {
+        let numStr = position.replacingOccurrences(of: "T", with: "")
+        guard let num = Int(numStr) else { return .gray }
+
+        switch num {
+        case 1:
+            return .yellow
+        case 2:
+            return .gray
+        case 3:
+            return .orange
+        case 4...10:
+            return .blue
+        default:
+            return .secondary
+        }
     }
 
     private func formatIndex(_ v: Double) -> String {

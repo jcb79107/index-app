@@ -15,7 +15,13 @@ struct Round: Identifiable, Codable, Hashable {
     let fieldAverage: Double?
     let fieldSize: Int?
 
-    // Optional metadata for later
+    // Tournament context (position in tournament after this round)
+    let position: String?        // "1", "T5", "MC" (missed cut), "WD" (withdrawn)
+    let earnings: Double?        // Prize money in USD (tournament total, not per-round)
+    let fedexPoints: Double?     // FedEx Cup points earned (tournament total)
+    let worldRanking: Int?       // Official World Golf Ranking at time of round
+
+    // Optional metadata
     let notes: String?
 }
 
