@@ -133,6 +133,7 @@ struct PlayerDetailViewRemote: View {
                 }
 
                 indexCard
+                playerStatsCard
                 chartCard
                 roundsCard
             }
@@ -173,6 +174,115 @@ struct PlayerDetailViewRemote: View {
         .padding(16)
         .background(.secondary.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var playerStatsCard: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Image(systemName: "star.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(Color.accentColor)
+                Text("Player Stats")
+                    .font(.headline)
+            }
+
+            // First row: Career Earnings & FedEx Rank
+            HStack(spacing: 16) {
+                // Career Earnings
+                if let careerEarnings = calculateCareerEarnings() {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "dollarsign.circle.fill")
+                                .font(.body)
+                                .foregroundStyle(.green)
+                            Text("Career Earnings")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Text(formatEarnings(careerEarnings))
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(.primary)
+                            .monospacedDigit()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                // FedEx Cup Rank (placeholder)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chart.bar.fill")
+                            .font(.body)
+                            .foregroundStyle(.blue)
+                        Text("FedEx Rank")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Text("—")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            // Second row: World Rank & Handicap
+            HStack(spacing: 16) {
+                // World Ranking (placeholder)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "globe")
+                            .font(.body)
+                            .foregroundStyle(.orange)
+                        Text("World Rank")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Text("—")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Handicap Index
+                if let index = player.currentIndex {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "figure.golf")
+                                .font(.body)
+                                .foregroundStyle(Color.accentColor)
+                            Text("Handicap")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Text(formatIndex(index))
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(.primary)
+                            .monospacedDigit()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .padding(20)
+        .background(.secondary.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func calculateCareerEarnings() -> Double? {
+        guard let rounds = player.recentRounds else { return nil }
+        let total = rounds.compactMap { $0.earnings }.reduce(0, +)
+        return total > 0 ? total : nil
+    }
+
+    private func formatEarnings(_ earnings: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: earnings)) ?? "$\(Int(earnings))"
     }
 
     private var chartCard: some View {
@@ -387,8 +497,7 @@ struct PlayerDetailViewRemote: View {
                             title: player.name,
                             slug: player.slug,
                             initialRounds: vm.rounds,
-                            viewModel: vm,
-                            player: player
+                            viewModel: vm
                         )
                     }
                 }
@@ -456,7 +565,7 @@ struct PlayerDetailViewRemote: View {
 
     private func roundRow(_ r: Round) -> some View {
         NavigationLink {
-            RoundDetailView(round: r, playerName: player.name, player: player)
+            RoundDetailView(round: r, playerName: player.name)
         } label: {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -596,7 +705,6 @@ struct RoundsListView: View {
     let slug: String
     let initialRounds: [Round]
     @ObservedObject var viewModel: PlayerRoundsViewModel
-    let player: RemotePlayer?  // For career stats
 
     private var grouped: [(key: String, value: [Round])] {
         let f = DateFormatter()
@@ -634,7 +742,7 @@ struct RoundsListView: View {
             ForEach(grouped, id: \.key) { year, items in
                 Section(year) {
                     ForEach(items) { r in
-                        RoundRowDetail(round: r, playerName: title, player: player)
+                        RoundRowDetail(round: r, playerName: title)
                     }
                 }
             }
@@ -663,11 +771,10 @@ struct RoundsListView: View {
 private struct RoundRowDetail: View {
     let round: Round
     let playerName: String
-    let player: RemotePlayer?
 
     var body: some View {
         NavigationLink {
-            RoundDetailView(round: round, playerName: playerName, player: player)
+            RoundDetailView(round: round, playerName: playerName)
         } label: {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {

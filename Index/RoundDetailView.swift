@@ -3,18 +3,12 @@ import SwiftUI
 struct RoundDetailView: View {
     let round: Round
     let playerName: String
-    let player: RemotePlayer?  // Optional - for career stats
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 // Hero Header Card
                 heroCard
-
-                // Player Career Stats (if available)
-                if let player = player {
-                    playerStatsCard(player)
-                }
 
                 // Tournament Result Card (only if position/earnings available)
                 if hasTournamentContext {
@@ -35,122 +29,6 @@ struct RoundDetailView: View {
         .navigationTitle("Round Details")
         .navigationBarTitleDisplayMode(.inline)
         .background(Color(.systemGroupedBackground))
-    }
-
-    // MARK: - Player Career Stats Card
-
-    private func playerStatsCard(_ player: RemotePlayer) -> some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                Image(systemName: "star.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Color.accentColor)
-                Text("Player Stats")
-                    .font(.headline)
-            }
-
-            HStack(spacing: 16) {
-                // Career Earnings
-                if let careerEarnings = calculateCareerEarnings(player) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Label("Career Earnings", systemImage: "dollarsign.circle.fill")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .labelStyle(.iconOnly)
-                            .font(.body)
-                            .foregroundStyle(.green)
-                        +
-                        Text(" Career Earnings")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-
-                        Text(formatEarnings(careerEarnings))
-                            .font(.title2.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .monospacedDigit()
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                // FedEx Cup Rank (placeholder for future)
-                VStack(alignment: .leading, spacing: 6) {
-                    Label("FedEx Rank", systemImage: "chart.bar.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .labelStyle(.iconOnly)
-                        .font(.body)
-                        .foregroundStyle(.blue)
-                    +
-                    Text(" FedEx Rank")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-
-                    Text("—")
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            HStack(spacing: 16) {
-                // World Ranking (placeholder for future)
-                VStack(alignment: .leading, spacing: 6) {
-                    Label("World Rank", systemImage: "globe")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .labelStyle(.iconOnly)
-                        .font(.body)
-                        .foregroundStyle(.orange)
-                    +
-                    Text(" World Rank")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-
-                    Text("—")
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                // Handicap Index
-                if let index = player.currentIndex {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Label("Index", systemImage: "figure.golf")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .labelStyle(.iconOnly)
-                            .font(.body)
-                            .foregroundStyle(Color.accentColor)
-                        +
-                        Text(" Handicap")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-
-                        Text(formatHandicapIndex(index))
-                            .font(.title2.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .monospacedDigit()
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-        }
-        .padding(20)
-        .background {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
-        }
-    }
-
-    private func calculateCareerEarnings(_ player: RemotePlayer) -> Double? {
-        guard let rounds = player.recentRounds else { return nil }
-        let total = rounds.compactMap { $0.earnings }.reduce(0, +)
-        return total > 0 ? total : nil
-    }
-
-    private func formatHandicapIndex(_ index: Double) -> String {
-        let formatted = String(format: "%.1f", abs(index))
-        return index < 0 ? "+\(formatted)" : formatted
     }
 
     // MARK: - Tournament Result Card
@@ -745,39 +623,7 @@ struct RoundDetailView: View {
                 worldRanking: nil,
                 notes: nil
             ),
-            playerName: "Tiger Woods",
-            player: RemotePlayer(
-                slug: "tiger-woods",
-                name: "Tiger Woods",
-                currentIndex: -4.1,
-                lastRoundDate: Date(),
-                tour: .pga,
-                roundCount: 1059,
-                indexHistory: nil,
-                photoURL: nil,
-                recentRounds: [
-                    Round(
-                        id: UUID(),
-                        date: Date(),
-                        tournament: "Masters Tournament",
-                        course: "Augusta National Golf Club - Augusta, GA",
-                        roundNumber: 4,
-                        score: 71,
-                        par: 72,
-                        differential: -2.1,
-                        courseRating: 76.2,
-                        slope: 137,
-                        yardage: 7545,
-                        fieldAverage: 73.5,
-                        fieldSize: 156,
-                        position: "T5",
-                        earnings: 450000.0,
-                        fedexPoints: 110.0,
-                        worldRanking: nil,
-                        notes: nil
-                    )
-                ]
-            )
+            playerName: "Tiger Woods"
         )
     }
 }
