@@ -387,7 +387,8 @@ struct PlayerDetailViewRemote: View {
                             title: player.name,
                             slug: player.slug,
                             initialRounds: vm.rounds,
-                            viewModel: vm
+                            viewModel: vm,
+                            player: player
                         )
                     }
                 }
@@ -455,7 +456,7 @@ struct PlayerDetailViewRemote: View {
 
     private func roundRow(_ r: Round) -> some View {
         NavigationLink {
-            RoundDetailView(round: r, playerName: player.name)
+            RoundDetailView(round: r, playerName: player.name, player: player)
         } label: {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -595,6 +596,7 @@ struct RoundsListView: View {
     let slug: String
     let initialRounds: [Round]
     @ObservedObject var viewModel: PlayerRoundsViewModel
+    let player: RemotePlayer?  // For career stats
 
     private var grouped: [(key: String, value: [Round])] {
         let f = DateFormatter()
@@ -632,7 +634,7 @@ struct RoundsListView: View {
             ForEach(grouped, id: \.key) { year, items in
                 Section(year) {
                     ForEach(items) { r in
-                        RoundRowDetail(round: r, playerName: title)
+                        RoundRowDetail(round: r, playerName: title, player: player)
                     }
                 }
             }
@@ -661,10 +663,11 @@ struct RoundsListView: View {
 private struct RoundRowDetail: View {
     let round: Round
     let playerName: String
+    let player: RemotePlayer?
 
     var body: some View {
         NavigationLink {
-            RoundDetailView(round: round, playerName: playerName)
+            RoundDetailView(round: round, playerName: playerName, player: player)
         } label: {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
